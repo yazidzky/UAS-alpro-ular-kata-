@@ -1,0 +1,296 @@
+using System; 
+using System.Collections.Generic; // Menggunakan namespace untuk bekerja dengan koleksi seperti List
+using System.IO; // Menggunakan namespace untuk operasi file
+
+namespace Ularkata
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            // Loop utama permainan, terus menampilkan menu dan menangani input pengguna
+            while (true)
+            {
+                ShowMenu(); // Panggil method untuk menampilkan menu utama
+                ConsoleKeyInfo key = Console.ReadKey(true); // Baca input kunci pengguna tanpa menampilkannya di layar
+                // Periksa tombol mana yang ditekan dan panggil method yang sesuai
+                if (key.Key == ConsoleKey.D1) // Jika tombol '1' ditekan
+                {
+                    StartGame(); // Mulai permainan
+                }
+                else if (key.Key == ConsoleKey.D2) // Jika tombol '2' ditekan
+                {
+                    ShowHighScores(); // Tampilkan skor tertinggi
+                }
+                else if (key.Key == ConsoleKey.D3) // Jika tombol '3' ditekan
+                {
+                    DeleteHighScores(); // Hapus skor tertinggi
+                }
+                else if (key.Key == ConsoleKey.Escape) // Jika tombol ESC ditekan
+                {
+                    break; // Keluar dari loop program
+                }
+            }
+        }
+
+        // Method untuk menampilkan menu utama
+        static void ShowMenu()
+        {
+            Console.Clear(); // Bersihkan konsol
+            Console.WriteLine("== Game UlarKata =="); // Cetak judul
+            Console.WriteLine("1. Mulai Permainan"); // Cetak pilihan 1
+            Console.WriteLine("2. Skor Tertinggi"); // Cetak pilihan 2
+            Console.WriteLine("3. Hapus Skor Tertinggi"); // Cetak pilihan 3
+            Console.WriteLine("Tekan ESC untuk keluar."); // Cetak pilihan keluar
+            Console.WriteLine("================"); // Cetak pemisah
+        }
+
+        // Method untuk memulai permainan ular
+        static void StartGame()
+        {
+            Console.Clear(); // Bersihkan konsol
+            Console.CursorVisible = false; // Sembunyikan kursor
+
+            Console.Write("Masukkan nama Anda: ");
+            string nama = Console.ReadLine(); // Baca input nama pemain
+
+            // Inisialisasi ular dengan karakter dari nama pemain
+            List<char> ular = new List<char>(); // List untuk menyimpan bagian ular
+            foreach (char c in nama)
+            {
+                ular.Add(c); // Tambahkan setiap karakter nama ke list ular
+            }
+
+            // Inisialisasi posisi ular, dimulai dari (5,5)
+            List<Tuple<int, int>> positions = new List<Tuple<int, int>>(); // List untuk menyimpan posisi bagian ular
+            for (int i = 0; i < ular.Count; i++)
+            {
+                positions.Add(new Tuple<int, int>(5, 5)); // Tambahkan posisi awal untuk semua bagian
+            }
+
+            // Inisialisasi variabel permainan
+            int x = 5; // Koordinat x awal kepala ular
+            int y = 5; // Koordinat y awal kepala ular
+            int score = 0; // Skor awal
+            int buahX = 10; // Koordinat x awal buah
+            int buahY = 10; // Koordinat y awal buah
+            int directionX = 1; // Arah awal ular sepanjang sumbu x
+            int directionY = 0; // Arah awal ular sepanjang sumbu y
+
+            int width = 30; // Lebar bidang permainan
+            int height = 20; // Tinggi bidang permainan
+            int namaIndex = 0; // Indeks untuk melacak karakter nama pemain
+
+            // List bentuk yang akan ditampilkan di bidang permainan
+            List<Tuple<int, int, char>> shapes = new List<Tuple<int, int, char>>();
+
+            DrawBoundary(width, height); // Gambar batas bidang permainan
+
+            // Loop permainan utama
+            while (true)
+            {
+                Console.Clear(); // Bersihkan konsol untuk menggambar ulang
+                DrawBoundary(width, height); // Gambar kembali batas
+                Console.SetCursorPosition(0, height + 2); // Set kursor di bawah bidang permainan
+                Console.WriteLine("Skor: " + score); // Tampilkan skor
+
+                // Gambar setiap bentuk dalam list shapes
+                foreach (var shape in shapes)
+                {
+                    Console.SetCursorPosition(shape.Item1, shape.Item2); // Set kursor ke posisi bentuk
+                    Console.Write(shape.Item3); // Gambar bentuk
+                }
+
+                // Gambar ular pada posisi saat ini
+                for (int i = 0; i < positions.Count; i++)
+                {
+                    int posX = positions[i].Item1; // Dapatkan koordinat x bagian ular
+                    int posY = positions[i].Item2; // Dapatkan koordinat y bagian ular
+                    if (posX >= 0 && posX < Console.BufferWidth && posY >= 0 && posY < Console.BufferHeight)
+                    {
+                        Console.SetCursorPosition(posX, posY); // Set kursor ke posisi bagian ular
+                        Console.Write(ular[i % ular.Count]); // Gambar bagian ular (karakter dari nama)
+                    }
+                }
+
+                // Gambar buah
+                Console.SetCursorPosition(buahX, buahY); // Set kursor ke posisi buah
+                Console.Write("O"); // Gambar buah
+
+                // Perbarui posisi ular
+                for (int i = positions.Count - 1; i > 0; i--)
+                {
+                    positions[i] = positions[i - 1]; // Pindahkan setiap bagian ke posisi bagian sebelumnya
+                }
+                positions[0] = new Tuple<int, int>(x + directionX, y + directionY); // Perbarui posisi kepala
+
+                // Perbarui koordinat kepala berdasarkan arah
+                x += directionX;
+                y += directionY;
+
+                // Periksa apakah ular memakan buah
+                if (x == buahX && y == buahY)
+                {
+                    score++; // Tambah skor
+                    Random rand = new Random(); // Buat generator angka acak baru
+                    // Bangkitkan posisi buah baru, pastikan tidak tumpang tindih dengan ular
+                    do
+                    {
+                        buahX = rand.Next(1, width - 1); // Koordinat x acak untuk buah
+                        buahY = rand.Next(1, height - 1); // Koordinat y acak untuk buah
+                    } while (positions.Contains(new Tuple<int, int>(buahX, buahY))); // Pastikan posisi buah baru tidak ada di ular
+
+                    ular.Add(nama[namaIndex % nama.Length]); // Tambahkan bagian baru ke ular
+                    positions.Add(positions[positions.Count - 1]); // Tambahkan posisi untuk bagian baru
+                    namaIndex++; // Tambahkan indeks nama
+
+                    // Tambahkan bentuk acak ke bidang setiap 10 poin
+                    if (score % 10 == 0)
+                    {
+                        shapes.Add(new Tuple<int, int, char>(rand.Next(1, width - 1), rand.Next(1, height - 1), GetRandomShape())); // Tambahkan bentuk acak
+                    }
+                }
+
+                // Periksa tabrakan dengan batas atau bentuk
+                if (x < 1 || x >= width - 1 || y < 1 || y >= height - 1 || CheckCollisionWithShapes(x, y, shapes))
+                {
+                    Console.SetCursorPosition(width / 2 - 5, height / 2); // Set kursor untuk pesan Game Over
+                    Console.WriteLine("Game Over!"); // Tampilkan pesan Game Over
+                    SaveScore(nama, score); // Simpan skor
+                    break; // Keluar dari loop permainan
+                }
+
+                System.Threading.Thread.Sleep(100); // Jeda untuk mengontrol kecepatan permainan
+
+                // Tangani input pengguna untuk mengubah arah ular
+                if (Console.KeyAvailable) // Periksa jika ada tombol yang ditekan
+                {
+                    ConsoleKeyInfo cki = Console.ReadKey(true); // Baca tombol tanpa menampilkannya
+                    switch (cki.Key) // Switch pada tombol yang ditekan
+                    {
+                        case ConsoleKey.UpArrow:
+                            if (directionY != 1) // Mencegah pembalikan arah ke bawah
+                            {
+                                directionX = 0; // Set arah x menjadi 0
+                                directionY = -1; // Set arah y menjadi atas
+                            }
+                            break;
+                        case ConsoleKey.DownArrow:
+                            if (directionY != -1) // Mencegah pembalikan arah ke atas
+                            {
+                                directionX = 0; // Set arah x menjadi 0
+                                directionY = 1; // Set arah y menjadi bawah
+                            }
+                            break;
+                        case ConsoleKey.LeftArrow:
+                            if (directionX != 1) // Mencegah pembalikan arah ke kanan
+                            {
+                                directionX = -1; // Set arah x menjadi kiri
+                                directionY = 0; // Set arah y menjadi 0
+                            }
+                            break;
+                        case ConsoleKey.RightArrow:
+                            if (directionX != -1) // Mencegah pembalikan arah ke kiri
+                            {
+                                directionX = 1; // Set arah x menjadi kanan
+                                directionY = 0; // Set arah y menjadi 0
+                            }
+                            break;
+                    }
+                }
+            }
+
+            Console.CursorVisible = true; // Tampilkan kembali kursor
+        }
+
+        // Method untuk mendapatkan bentuk acak untuk permainan
+        static char GetRandomShape()
+        {
+            char[] shapes = { '▲', '●', '★', '■' }; // Array bentuk yang mungkin
+            Random rand = new Random(); // Buat generator angka acak baru
+            return shapes[rand.Next(shapes.Length)]; // Kembalikan bentuk acak dari array
+        }
+
+        // Method untuk memeriksa apakah ular bertabrakan dengan bentuk
+        static bool CheckCollisionWithShapes(int x, int y, List<Tuple<int, int, char>> shapes)
+        {
+            foreach (var shape in shapes) // Iterasi setiap bentuk dalam list
+            {
+                if (shape.Item1 == x && shape.Item2 == y) // Jika koordinat kepala ular cocok dengan koordinat bentuk
+                {
+                    return true; // Tabrakan terdeteksi
+                }
+            }
+            return false; // Tidak ada tabrakan terdeteksi
+        }
+
+        // Method untuk menggambar batas bidang permainan
+        static void DrawBoundary(int width, int height)
+        {
+            // Gambar garis batas horizontal
+            for (int i = 0; i < width; i++)
+            {
+                Console.SetCursorPosition(i, 0); // Set kursor ke batas atas
+                Console.Write("="); // Gambar karakter batas
+                Console.SetCursorPosition(i, height - 1); // Set kursor ke batas bawah
+                Console.Write("="); // Gambar karakter batas
+            }
+
+            // Gambar garis batas vertikal
+            for (int i = 0; i < height; i++)
+            {
+                Console.SetCursorPosition(0, i); // Set kursor ke batas kiri
+                Console.Write("|"); // Gambar karakter batas
+                Console.SetCursorPosition(width - 1, i); // Set kursor ke batas kanan
+                Console.Write("|"); // Gambar karakter batas
+            }
+        }
+
+        // Method untuk menampilkan skor tertinggi
+        static void ShowHighScores()
+        {
+            Console.Clear(); // Bersihkan konsol
+            Console.WriteLine("== SKOR TERTINGGI =="); // Cetak judul
+            if (File.Exists("highscores.txt")) // Periksa apakah file skor tertinggi ada
+            {
+                string[] scores = File.ReadAllLines("highscores.txt"); // Baca semua baris dari file
+                foreach (string score in scores) // Iterasi setiap skor
+                {
+                    Console.WriteLine(score); // Cetak setiap skor
+                }
+            }
+            else
+            {
+                Console.WriteLine("Belum ada skor tertinggi."); // Cetak pesan jika file skor tertinggi tidak ditemukan
+            }
+            Console.WriteLine("================="); // Cetak pemisah
+            Console.WriteLine("Tekan apa saja untuk kembali ke menu."); // Cetak instruksi
+            Console.ReadKey(true); // Tunggu input pengguna
+        }
+
+        // Method untuk menghapus file skor tertinggi
+        static void DeleteHighScores()
+        {
+            if (File.Exists("highscores.txt")) // Periksa apakah file skor tertinggi ada
+            {
+                File.Delete("highscores.txt"); // Hapus file
+                Console.WriteLine("Skor tertinggi dihapus."); // Cetak pesan konfirmasi
+            }
+            else
+            {
+                Console.WriteLine("Tidak ada skor tertinggi untuk dihapus."); // Cetak pesan jika file skor tertinggi tidak ditemukan
+            }
+            Console.WriteLine("Tekan apa saja untuk kembali ke menu."); // Cetak instruksi
+            Console.ReadKey(true); // Tunggu input pengguna
+        }
+
+        // Method untuk menyimpan skor ke file
+        static void SaveScore(string name, int score)
+        {
+            using (StreamWriter sw = File.AppendText("highscores.txt")) // Buka file skor untuk menambahkan
+            {
+                sw.WriteLine($"{name}: {score}"); // Tulis nama dan skor ke file
+            }
+        }
+    }
+}
